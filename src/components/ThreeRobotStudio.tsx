@@ -366,12 +366,15 @@ export const ThreeRobotStudio: React.FC<ThreeRobotStudioProps> = ({
     };
     window.addEventListener('resize', onResize);
 
-    const clock = new THREE.Clock();
+    let lastTime = performance.now();
+    const startTime = lastTime;
     let blinkTimer = 0;
 
     const animate = () => {
-      const delta = clock.getDelta();
-      const elapsed = clock.getElapsedTime();
+      const currentTime = performance.now();
+      const delta = Math.min((currentTime - lastTime) / 1000, 0.1);
+      lastTime = currentTime;
+      const elapsed = (currentTime - startTime) / 1000;
 
       // Exponential damping on head rotation to track mouse
       const dampingFactor = 1 - Math.exp(-6 * delta);

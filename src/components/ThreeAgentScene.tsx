@@ -253,11 +253,14 @@ export const ThreeAgentScene: React.FC<ThreeAgentSceneProps> = ({
     container.addEventListener('mousemove', onPointerMove);
 
     // 6. Animation Loop with Lossless 60fps & State Handling
-    const clock = new THREE.Clock();
+    let lastTime = performance.now();
+    const startTime = lastTime;
 
     const animate = () => {
-      const delta = clock.getDelta();
-      const elapsed = clock.getElapsedTime();
+      const currentTime = performance.now();
+      const delta = Math.min((currentTime - lastTime) / 1000, 0.1);
+      lastTime = currentTime;
+      const elapsed = (currentTime - startTime) / 1000;
 
       // Damped rotation to pointer
       agentCoreGroup.rotation.y += (targetRotY - agentCoreGroup.rotation.y) * (1 - Math.exp(-5 * delta));
