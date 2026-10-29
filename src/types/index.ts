@@ -5,6 +5,16 @@ export interface ChatMessage {
   timestamp: string;
   model?: string;
   image?: string;
+  generatedCode?: {
+    language: string;
+    code: string;
+    title?: string;
+  };
+  generatedImage?: {
+    url: string;
+    prompt: string;
+    title: string;
+  };
   plantAnalysis?: PlantCareResult;
 }
 

@@ -240,11 +240,28 @@ export default function App() {
         role: 'assistant',
         content: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: data.modelUsed || 'gemini-2.5-flash',
+        model: data.modelUsed || 'gemini-3.8-flash',
+        generatedCode: data.generatedCode,
+        generatedImage: data.generatedImage,
       };
 
       setMessages((prev) => [...prev, aiMsg]);
       soundFX.playSuccess();
+
+      // If a website file or task was created, refresh workspace in real-time
+      if (data.generatedCode || data.generatedImage) {
+        try {
+          const dbRes = await fetch('/api/db/state');
+          if (dbRes.ok) {
+            const dbData = await dbRes.json();
+            if (dbData.tasks) setTasks(dbData.tasks);
+            if (dbData.logs) setLogs(dbData.logs);
+            if (dbData.workspaceFiles) setWorkspaceFiles(dbData.workspaceFiles);
+          }
+        } catch {
+          // ignore sync failure
+        }
+      }
 
       if (!voiceAudioMuted) {
         speakText(replyText);
