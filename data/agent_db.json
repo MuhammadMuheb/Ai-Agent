@@ -1,0 +1,143 @@
+{
+  "memories": [
+    {
+      "id": "m1",
+      "category": "boss",
+      "title": "Boss (Sir Imran) ki Pasand",
+      "detail": "Dark theme, clean simple layout, concise replies, hard deadline shaam 6:00 baje.",
+      "updatedAt": "2026-10-29T08:00:00.000Z"
+    },
+    {
+      "id": "m2",
+      "category": "mama",
+      "title": "Mama ki Routine",
+      "detail": "Roz shaam 9:00 baje call karna zaroori hai. Voice message zyada pasand karti hain.",
+      "updatedAt": "2026-10-29T08:00:00.000Z"
+    },
+    {
+      "id": "m3",
+      "category": "projects",
+      "title": "Chal Rahe Projects",
+      "detail": "Muhib Desktop Agent system + Plant Care Vision diagnostics engine.",
+      "updatedAt": "2026-10-29T08:00:00.000Z"
+    },
+    {
+      "id": "m4",
+      "category": "habits",
+      "title": "Meri Aadatein",
+      "detail": "Roman Urdu mein baat cheet pasand hai. Har 45 minute ke baad walk/chai break zaroori hai.",
+      "updatedAt": "2026-10-29T08:00:00.000Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-1",
+      "title": "11:00 AM - Meeting prep (Sir Imran ke sath)",
+      "time": "11:00 AM",
+      "category": "work",
+      "priority": "urgent",
+      "completed": false,
+      "subtasks": [
+        { "id": "st-1", "text": "Presentation slides review karna", "done": true },
+        { "id": "st-2", "text": "Metrics aur KPIs check karna", "done": false }
+      ]
+    },
+    {
+      "id": "task-2",
+      "title": "14:00 PM - Mama ko call aur khariyat maloom karna",
+      "time": "02:00 PM",
+      "category": "family",
+      "priority": "high",
+      "completed": false,
+      "subtasks": []
+    },
+    {
+      "id": "task-3",
+      "title": "Muhib Workspace files audit & sync",
+      "time": "04:30 PM",
+      "category": "work",
+      "priority": "medium",
+      "completed": false,
+      "subtasks": []
+    },
+    {
+      "id": "task-4",
+      "title": "Chai & deep focus break protocol",
+      "time": "05:15 PM",
+      "category": "life",
+      "priority": "low",
+      "completed": true,
+      "subtasks": []
+    }
+  ],
+  "logs": [
+    {
+      "id": "l1",
+      "time": "10:31 AM",
+      "action": "Boss ka message padha",
+      "status": "approved",
+      "darja": "hara",
+      "details": "Sir Imran WhatsApp query context scan"
+    },
+    {
+      "id": "l2",
+      "time": "10:32 AM",
+      "action": "Draft reply banaya",
+      "status": "pending",
+      "darja": "peela",
+      "details": "Roman Urdu professional breakdown generated"
+    },
+    {
+      "id": "l3",
+      "time": "10:33 AM",
+      "action": "Approval request: WhatsApp message send",
+      "status": "pending",
+      "darja": "laal",
+      "details": "Requires explicit approval from Muheb bhai before sending"
+    }
+  ],
+  "approvals": [
+    {
+      "id": "appr-1",
+      "title": "Boss (Sir Imran) ko WhatsApp reply bhejna",
+      "recipient": "+92 300 1234567 (Sir Imran)",
+      "channel": "WhatsApp",
+      "content": "Assalam-o-Alaikum Sir, presentation aur architecture notes tayyar hain. Main 11:00 AM meeting se pehle file share kar doonga.",
+      "darja": "laal",
+      "createdAt": "10:33 AM",
+      "status": "pending"
+    },
+    {
+      "id": "appr-2",
+      "title": "Client inquiry email response send karna",
+      "recipient": "partner@cloudcore.io",
+      "channel": "Email",
+      "content": "Dear Partner, Muhib AI desktop agent infrastructure v2 has been finalized. We are ready to deploy the agentic workflow pipeline.",
+      "darja": "laal",
+      "createdAt": "10:45 AM",
+      "status": "pending"
+    }
+  ],
+  "workspaceFiles": [
+    {
+      "id": "f1",
+      "name": "Muhib_Agent_Architecture.md",
+      "size": "4.2 KB",
+      "updatedAt": "Today, 10:15 AM",
+      "content": "# Muhib AI - Desktop Agent Architecture\n\n1. Brain: Gemini 2.5 Flash + Planner\n2. Eyes: Screen & Image Vision\n3. Ears: Web Speech STT\n4. Voice: Neural TTS Engine\n5. Hands: Safe Workspace Tools\n6. Memory: Local Disk Persistence\n7. Safety Gate: 4-Tier Guardrails (Hara, Peela, Laal, Siyah)"
+    },
+    {
+      "id": "f2",
+      "name": "Daily_Executive_Brief.txt",
+      "size": "1.8 KB",
+      "updatedAt": "Today, 08:30 AM",
+      "content": "Aaj ka din Muheb bhai ke liye:\n- 11:00 AM Meeting prep\n- 02:00 PM Mama ko call\n- Safety matrix 100% active\n- All tools ready"
+    }
+  ],
+  "safetyLevels": {
+    "hara": { "label": "Hara (Auto)", "desc": "Khud kar de, sirf log likhe (e.g. file parhna, web search)", "enabled": true },
+    "peela": { "label": "Peela (Poochhe)", "desc": "Ek baar poochhe (e.g. workspace mein file likhna)", "enabled": true },
+    "laal": { "label": "Laal (Approval Gate)", "desc": "Har baar poochhe: BHEJ DO, BADLO, CANCEL (e.g. message bhejna, file delete)", "enabled": true },
+    "siyah": { "label": "Siyah (Blocked)", "desc": "Kabhi nahi (e.g. paisay bhejna, passwords, system core)", "enabled": true }
+  }
+}

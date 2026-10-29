@@ -1,61 +1,75 @@
 @import "tailwindcss";
 
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --bg: #05080c;
+  --surface: #0b1118;
+  --surface-2: #111a24;
+  --border: #1c2a38;
+  --text: #e6edf3;
+  --text-muted: #8b9bab;
+  --accent: #27d7e6;
+  --success: #2ee59d;
+  --warning: #f5b83d;
+  --danger: #ff4d5e;
 }
 
 body {
   margin: 0;
   padding: 0;
   font-family: var(--font-sans);
-  background-color: #0c121e;
-  color: #f1f5f9;
+  background-color: #05080c;
+  color: #e6edf3;
+  line-height: 1.6;
   overflow-x: hidden;
   user-select: text;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Refreshing Ambient Backdrop Mesh */
-.refresh-backdrop {
-  background: 
-    radial-gradient(circle at 20% 0%, rgba(56, 189, 248, 0.12) 0%, transparent 40%),
-    radial-gradient(circle at 80% 10%, rgba(99, 102, 241, 0.14) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
-    #0c121e;
+/* Blueprint Design Token Classes */
+.bg-blueprint {
+  background-color: #05080c;
 }
 
-/* Frosted Glass Card */
-.glass-panel {
-  background: rgba(18, 26, 43, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+.surface-blueprint {
+  background-color: #0b1118;
+  border: 1px solid #1c2a38;
 }
 
-.glass-panel-hover {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+.surface-2-blueprint {
+  background-color: #111a24;
 }
 
-.glass-panel-hover:hover {
-  border-color: rgba(56, 189, 248, 0.35);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.4), 0 0 20px rgba(56, 189, 248, 0.1);
+.border-blueprint {
+  border-color: #1c2a38;
 }
 
-/* Custom Delightful Scrollbar */
+.text-blueprint {
+  color: #e6edf3;
+}
+
+.text-muted-blueprint {
+  color: #8b9bab;
+}
+
+.accent-blueprint {
+  color: #27d7e6;
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: #1c2a38;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(56, 189, 248, 0.4);
+  background: #27d7e6;
 }

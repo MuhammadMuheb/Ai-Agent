@@ -149,12 +149,36 @@ export type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking';
 export type ActiveTab = 'agent' | 'voice' | 'notes' | 'plant' | 'research' | 'desktop';
 
 export type NavigationTab =
+  | 'aaj'
+  | 'baat-cheet'
+  | 'kaam'
+  | 'yaadasht'
+  | 'settings'
   | 'dashboard'
   | 'agentic-mission'
   | 'web-hub'
   | 'life-ops'
   | 'research'
   | 'chat';
+
+export interface ApprovalItem {
+  id: string;
+  title: string;
+  recipient?: string;
+  channel?: string;
+  content: string;
+  darja: 'hara' | 'peela' | 'laal' | 'siyah';
+  createdAt: string;
+  status: 'pending' | 'approved' | 'denied';
+}
+
+export interface WorkspaceFile {
+  id: string;
+  name: string;
+  size: string;
+  updatedAt: string;
+  content: string;
+}
 
 export interface AgentMissionStep {
   id: string;

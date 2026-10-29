@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
@@ -14,6 +15,44 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '30mb' }));
+
+// Persistent Database Path
+const DB_PATH = path.resolve(__dirname, 'data', 'agent_db.json');
+
+const readAgentDb = () => {
+  try {
+    if (!fs.existsSync(DB_PATH)) {
+      return {
+        memories: [],
+        tasks: [],
+        logs: [],
+        approvals: [],
+        workspaceFiles: [],
+        safetyLevels: {},
+      };
+    }
+    const raw = fs.readFileSync(DB_PATH, 'utf-8');
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to read agent_db.json:', err);
+    return {
+      memories: [],
+      tasks: [],
+      logs: [],
+      approvals: [],
+      workspaceFiles: [],
+      safetyLevels: {},
+    };
+  }
+};
+
+const writeAgentDb = (data: any) => {
+  try {
+    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to write agent_db.json:', err);
+  }
+};
 
 // Helper to initialize GoogleGenAI securely on the server
 const hasPlausibleApiKey = (): boolean => {
@@ -117,7 +156,7 @@ let logs: ActionLog[] = [
 
 // 1. Multi-turn Conversational Chat
 app.post('/api/chat', async (req, res) => {
-  const { messages, model = 'gemini-3.8-flash', customInstruction } = req.body;
+  const { messages, model = 'gemini-2.5-flash', customInstruction } = req.body;
 
   if (!Array.isArray(messages)) {
     return res.status(400).json({ error: 'Messages array is required.' });
@@ -128,7 +167,7 @@ app.post('/api/chat', async (req, res) => {
     const lower = lastUserMessage.toLowerCase();
     
     if (lower.includes('website') || lower.includes('url') || lower.includes('web')) {
-      return 'Jee Muheb bhai, Universal Web Connector 24 ghante active hai. Aap kisi bhi website ka kaam ya link batayein, main foran check kar ke aap ko bata deta hoon.';
+      return 'Jee Muheb bhai, Universal Web Connector 24 ghante active hai. Aap kisi bhi website ka link batayein, main foran check kar ke aap ko bata deta hoon.';
     }
     if (lower.includes('research') || lower.includes('kaam') || lower.includes('task')) {
       return 'Jee bilkul janab, aap ka har kaam aur research analysis mere paas active hai. Aap hukum karein, main step-by-step mukammal kar deta hoon.';
@@ -148,19 +187,24 @@ app.post('/api/chat', async (req, res) => {
 
   try {
     const ai = getAiClient();
+    const db = readAgentDb();
 
-    const memoryContext = memories
-      .map((m) => `[${m.category.toUpperCase()}]: ${m.title} - ${m.detail}`)
+    const memoryContext = (db.memories || [])
+      .map((m: any) => `[${(m.category || 'NOTE').toUpperCase()}]: ${m.title} - ${m.detail}`)
       .join('\n');
 
-    const defaultSystemInstruction = `Aap ek nihayat ba-adab, tameezdaar, aur intehai zaheen 24/7 Desktop AI Robot Companion hain jiska naam 'Muhib AI' hai.
-Aap Muhammad Muheb Riaz (Muheb bhai) ke personal AI robot hain jo unke desktop par 24/7 run karta hai.
+    const defaultSystemInstruction = `Tum Muhib AI ho, Muhammad Muheb ke personal desktop agent.
 
-ZAROORI HIDAYAT (MANDATORY RULES):
-1. Zabaan: Hamesha respectful aur saaf Roman Urdu mein baat karein (jaise: "Jee Muheb bhai, main aap ke liye yeh abhi kar deta hoon", "Aap bilkul fikar na karein", "Aap ka hukum sar aankhon par"). Agar user English mein pooche to bhi Roman Urdu ya dignified English dono mein adab se jawab dein.
-2. Lehja (Tone): Nihayat tameezdaar, sanjeeda, respectful, aur madadgar. Kisi qism ki faltu be-adabi, robotic slop, ya fazool lambi baatein na karein. Seedha, kaam ka aur mukammal jawab dein.
-3. Karkardagi: Aap user ke har kaam, sawaal, coding, planning, writing, market research, daily routine, aur web task ko foran hal kar sakte hain.
-4. Active Executive Context:
+Zabaan: Roman Urdu mein baat karo. Agar boss English ya Urdu script mein likhe to usi mein jawab do. Aasan aur dostana lehja, lekin professional.
+
+Usool:
+1. Jo cheez nahi jaante, saaf kaho "mujhe yeh nahi pata" aur search ya sawal karo. Andaza kabhi mat lagao.
+2. Koi bhi message, delete, ya paisay wala kaam bina approval ke mat karo.
+3. Har kaam se pehle chhota plan batao, kaam ke baad nateeja check karo aur batao.
+4. Mushkil ho to ek waazeh sawal poocho, lambay sawal nahi.
+5. Jawab chhota aur kaam ka ho.
+
+Yaadasht (Active Memory Context):
 ${memoryContext}`;
 
     const systemInstruction = customInstruction || defaultSystemInstruction;
@@ -171,7 +215,7 @@ ${memoryContext}`;
       parts: [{ text: m.content }],
     }));
 
-    const targetModel = model || 'gemini-3.8-flash';
+    const targetModel = 'gemini-2.5-flash';
 
     const response = await ai.models.generateContent({
       model: targetModel,
@@ -469,9 +513,10 @@ app.post('/api/tts', async (req, res) => {
   }
 });
 
-// 5. Memory CRUD APIs
+// 5. Memory CRUD APIs (Persisted to disk)
 app.get('/api/memories', (req, res) => {
-  res.json({ memories });
+  const db = readAgentDb();
+  res.json({ memories: db.memories || [] });
 });
 
 app.post('/api/memories', (req, res) => {
@@ -479,38 +524,48 @@ app.post('/api/memories', (req, res) => {
   if (!title || !detail) {
     return res.status(400).json({ error: 'Title and detail are required' });
   }
-  const newMemory: MemoryItem = {
+  const db = readAgentDb();
+  const newMemory = {
     id: `m-${Date.now()}`,
     category: category || 'habits',
     title,
     detail,
     updatedAt: new Date().toISOString(),
   };
-  memories.unshift(newMemory);
+  db.memories = db.memories || [];
+  db.memories.unshift(newMemory);
+  writeAgentDb(db);
   res.json({ success: true, memory: newMemory });
 });
 
 app.delete('/api/memories/:id', (req, res) => {
   const { id } = req.params;
-  memories = memories.filter((m) => m.id !== id);
+  const db = readAgentDb();
+  db.memories = (db.memories || []).filter((m: any) => m.id !== id);
+  writeAgentDb(db);
   res.json({ success: true, id });
 });
 
-// 6. Action Logs & Permissions API
+// 6. Action Logs & Permissions API (Persisted to disk)
 app.get('/api/logs', (req, res) => {
-  res.json({ logs });
+  const db = readAgentDb();
+  res.json({ logs: db.logs || [] });
 });
 
 app.post('/api/logs', (req, res) => {
-  const { action, status, details } = req.body;
-  const newLog: ActionLog = {
+  const { action, status, details, darja } = req.body;
+  const db = readAgentDb();
+  const newLog = {
     id: `l-${Date.now()}`,
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     action: action || 'Operation executed',
     status: status || 'approved',
+    darja: darja || 'hara',
     details: details || '',
   };
-  logs.unshift(newLog);
+  db.logs = db.logs || [];
+  db.logs.unshift(newLog);
+  writeAgentDb(db);
   res.json({ success: true, log: newLog });
 });
 
@@ -2004,40 +2059,134 @@ app.get('/api/export/archive', async (req, res) => {
   }
 });
 
-// Execute authenticated git push to GitHub
-app.post('/api/git/push', async (req, res) => {
-  const { token, repoUrl = 'https://github.com/MuhammadMuheb/Ai-Agent.git', branch = 'main' } = req.body;
-  if (!token || typeof token !== 'string' || !token.trim()) {
-    return res.status(400).json({ error: 'GitHub Personal Access Token is required to authorize push.' });
+// Safe Persistent Agent Database Endpoints
+app.get('/api/db/state', (req, res) => {
+  const db = readAgentDb();
+  res.json(db);
+});
+
+// Approval Gate: Respond to pending Laal actions (BHEJ DO, BADLO, CANCEL)
+app.post('/api/approvals/respond', (req, res) => {
+  const { id, action, feedback, updatedContent } = req.body;
+  const db = readAgentDb();
+  const approval = (db.approvals || []).find((a: any) => a.id === id);
+
+  if (!approval) {
+    return res.status(404).json({ error: 'Approval request not found.' });
   }
 
-  const cleanToken = token.trim();
-  try {
-    const { execSync } = await import('child_process');
-    // Sanitize repo url to inject token
-    const authenticatedUrl = repoUrl.replace('https://', `https://${cleanToken}@`);
-    
-    // Push directly with the authenticated token
-    const output = execSync(`git push -u "${authenticatedUrl}" ${branch} 2>&1`, {
-      cwd: '/app/applet',
-      encoding: 'utf-8',
-      timeout: 30000,
-    });
+  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    return res.json({
-      success: true,
-      message: 'Code successfully pushed to GitHub repository!',
-      output,
+  if (action === 'approved') {
+    approval.status = 'approved';
+    db.logs = db.logs || [];
+    db.logs.unshift({
+      id: `l-${Date.now()}`,
+      time: timeStr,
+      action: `[BHEJ DO] Manzoori mili: ${approval.title}`,
+      status: 'approved',
+      darja: 'laal',
+      details: approval.content,
     });
-  } catch (err: any) {
-    const rawError = err?.stdout || err?.stderr || err?.message || 'Push failed';
-    // Clean token from output so it never leaks in response
-    const sanitizedError = String(rawError).replace(new RegExp(cleanToken, 'g'), '[REDACTED_TOKEN]');
-    return res.status(400).json({
-      success: false,
-      error: sanitizedError,
+  } else if (action === 'denied') {
+    approval.status = 'denied';
+    db.logs = db.logs || [];
+    db.logs.unshift({
+      id: `l-${Date.now()}`,
+      time: timeStr,
+      action: `[CANCEL] Radd kiya gaya: ${approval.title}`,
+      status: 'denied',
+      darja: 'laal',
+      details: feedback || 'User cancelled action',
+    });
+  } else if (action === 'modified') {
+    approval.status = 'approved';
+    approval.content = updatedContent || approval.content;
+    db.logs = db.logs || [];
+    db.logs.unshift({
+      id: `l-${Date.now()}`,
+      time: timeStr,
+      action: `[BADLO] Tabdeeli ke baad manzoori: ${approval.title}`,
+      status: 'approved',
+      darja: 'laal',
+      details: approval.content,
     });
   }
+
+  writeAgentDb(db);
+  res.json({ success: true, approval, logs: db.logs });
+});
+
+// Tasks persistence
+app.get('/api/tasks', (req, res) => {
+  const db = readAgentDb();
+  res.json({ tasks: db.tasks || [] });
+});
+
+app.post('/api/tasks', (req, res) => {
+  const { title, time, priority, category } = req.body;
+  if (!title) return res.status(400).json({ error: 'Title required' });
+  const db = readAgentDb();
+  const newTask = {
+    id: `task-${Date.now()}`,
+    title,
+    time: time || 'Today',
+    category: category || 'work',
+    priority: priority || 'medium',
+    completed: false,
+    subtasks: [],
+  };
+  db.tasks = db.tasks || [];
+  db.tasks.unshift(newTask);
+  writeAgentDb(db);
+  res.json({ success: true, task: newTask });
+});
+
+app.patch('/api/tasks/:id', (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  const db = readAgentDb();
+  db.tasks = (db.tasks || []).map((t: any) => (t.id === id ? { ...t, ...updates } : t));
+  writeAgentDb(db);
+  res.json({ success: true });
+});
+
+// Workspace file sandbox
+app.get('/api/workspace/files', (req, res) => {
+  const db = readAgentDb();
+  res.json({ files: db.workspaceFiles || [] });
+});
+
+app.post('/api/workspace/files', (req, res) => {
+  const { name, content } = req.body;
+  if (!name) return res.status(400).json({ error: 'File name required' });
+  const db = readAgentDb();
+  db.workspaceFiles = db.workspaceFiles || [];
+  const existingIndex = db.workspaceFiles.findIndex((f: any) => f.name === name);
+  const fileObj = {
+    id: `f-${Date.now()}`,
+    name,
+    size: `${(content.length / 1024).toFixed(1)} KB`,
+    updatedAt: 'Just now',
+    content,
+  };
+  if (existingIndex >= 0) {
+    db.workspaceFiles[existingIndex] = fileObj;
+  } else {
+    db.workspaceFiles.unshift(fileObj);
+  }
+  // Log this Peela darja action
+  db.logs = db.logs || [];
+  db.logs.unshift({
+    id: `l-${Date.now()}`,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    action: `Workspace file likhi: ${name}`,
+    status: 'approved',
+    darja: 'peela',
+    details: `Size: ${fileObj.size}`,
+  });
+  writeAgentDb(db);
+  res.json({ success: true, file: fileObj });
 });
 
 // Vite Middleware for Fullstack Development

@@ -1,6 +1,6 @@
 {
-  "name": "Muhib AI - Personal AI Agent & Plant Vision",
-  "description": "Dark sci-fi 3-column personal AI assistant with voice, image analysis, plant care identification, memory, and message approval workflows.",
+  "name": "Muhib AI – Professional Desktop Agent",
+  "description": "Personal 24/7 desktop AI agent companion for Muhammad Muheb Riaz with Roman Urdu persona, 3D robot, persistent memory, and safety approval guardrails.",
   "requestFramePermissions": [
     "microphone"
   ],

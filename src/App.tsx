@@ -4,20 +4,17 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ExecutiveHeader } from './components/ExecutiveHeader.tsx';
-import { ExecutiveDashboard } from './components/ExecutiveDashboard.tsx';
-import { AgenticMissionControl } from './components/AgenticMissionControl.tsx';
-import { UniversalWebConnector } from './components/UniversalWebConnector.tsx';
-import { LifeOperationsCenter } from './components/LifeOperationsCenter.tsx';
-import { DeepResearchView } from './components/DeepResearchView.tsx';
-import { ExecutiveChatView } from './components/ExecutiveChatView.tsx';
-import { AIAgentAppScreen } from './components/AIAgentAppScreen.tsx';
-import { DribbbleAgentApp } from './components/DribbbleAgentApp.tsx';
-import { DesktopRobotView } from './components/DesktopRobotView.tsx';
-import { VoicePromptDock } from './components/VoicePromptDock.tsx';
-import { MemoryVaultDrawer } from './components/MemoryVaultDrawer.tsx';
-import { INITIAL_WEB_CONNECTORS } from './data/defaultConnectors.ts';
+import { LeftRail } from './components/navigation/LeftRail.tsx';
+import { AajView } from './components/views/AajView.tsx';
+import { BaatCheetView } from './components/views/BaatCheetView.tsx';
+import { KaamView } from './components/views/KaamView.tsx';
+import { YaadashtView } from './components/views/YaadashtView.tsx';
+import { SettingsView } from './components/views/SettingsView.tsx';
+import { ApprovalSheet } from './components/ui/ApprovalSheet.tsx';
+import { DetailDrawer } from './components/ui/DetailDrawer.tsx';
+import { CommandPalette } from './components/ui/CommandPalette.tsx';
 import { soundFX } from './utils/soundEffects.ts';
+import { INITIAL_WEB_CONNECTORS } from './data/defaultConnectors.ts';
 import {
   ChatMessage,
   MemoryItem,
@@ -26,207 +23,113 @@ import {
   WebConnector,
   ExecutiveTask,
   LifeWorkflow,
+  ApprovalItem,
+  WorkspaceFile,
+  ActionLog,
 } from './types/index.ts';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<NavigationTab>('chat');
-  const [agentDisplayMode, setAgentDisplayMode] = useState<'orb' | 'chat'>('orb');
-  const [vaultOpen, setVaultOpen] = useState(false);
+  const [currentTab, setCurrentTab] = useState<NavigationTab>('aaj');
+  const [orbState, setOrbState] = useState<OrbState>('idle');
   const [voiceAudioMuted, setVoiceAudioMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [orbState, setOrbState] = useState<OrbState>('idle');
   const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
 
-  // 1. Universal Web Connectors (5,000+ ready architecture)
-  const [connectors, setConnectors] = useState<WebConnector[]>(() => {
-    try {
-      const saved = localStorage.getItem('muhib_web_connectors');
-      return saved ? JSON.parse(saved) : INITIAL_WEB_CONNECTORS;
-    } catch {
-      return INITIAL_WEB_CONNECTORS;
-    }
-  });
+  // Overlay states (Strict 2 overlays rule from Blueprint)
+  const [activeApproval, setActiveApproval] = useState<ApprovalItem | null>(null);
+  const [isApprovalOpen, setIsApprovalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<WorkspaceFile | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('muhib_web_connectors', JSON.stringify(connectors));
-    } catch {
-      // ignore
-    }
-  }, [connectors]);
+  // Persistent Database State (Synchronized with /data/agent_db.json)
+  const [memories, setMemories] = useState<MemoryItem[]>([]);
+  const [tasks, setTasks] = useState<ExecutiveTask[]>([]);
+  const [logs, setLogs] = useState<ActionLog[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState<ApprovalItem[]>([]);
+  const [workspaceFiles, setWorkspaceFiles] = useState<WorkspaceFile[]>([]);
+  const [connectors, setConnectors] = useState<WebConnector[]>(INITIAL_WEB_CONNECTORS);
 
-  // 2. Life & Work Priority Tasks
-  const [tasks, setTasks] = useState<ExecutiveTask[]>(() => {
-    try {
-      const saved = localStorage.getItem('muhib_life_tasks');
-      return saved
-        ? JSON.parse(saved)
-        : [
-            {
-              id: 'task-1',
-              title: 'Review quarterly tech roadmap & agent infrastructure',
-              priority: 'urgent',
-              category: 'work',
-              completed: false,
-              dueDate: 'Today, 2:00 PM',
-              subtasks: [
-                { id: 'st-1', text: 'Audit 5,000+ web connector endpoints', done: true },
-                { id: 'st-2', text: 'Verify Gemini 3.8 Flash latency guarantees', done: false },
-              ],
-              aiRecommendation: 'High-leverage focus task. Recommended for deep morning slot.',
-            },
-            {
-              id: 'task-2',
-              title: 'Orchestrate personal finance & investment dashboard',
-              priority: 'high',
-              category: 'finance',
-              completed: false,
-              dueDate: 'Today, 5:00 PM',
-              subtasks: [],
-            },
-            {
-              id: 'task-3',
-              title: 'Maintain daily physical fitness & hydration protocol',
-              priority: 'medium',
-              category: 'life',
-              completed: true,
-              dueDate: 'Daily Routine',
-              subtasks: [],
-            },
-          ];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('muhib_life_tasks', JSON.stringify(tasks));
-    } catch {
-      // ignore
-    }
-  }, [tasks]);
-
-  // 3. Autonomous Life Workflows
+  // Workflows state
   const [workflows, setWorkflows] = useState<LifeWorkflow[]>([
     {
       id: 'wf-morning',
       title: 'Morning Executive Briefing & Agenda Sync',
       category: 'operations',
-      description: 'Synthesizes daily priorities, weather forecasts, time-blocked calendar slots, and vital notifications.',
+      description: 'Daily priorities, weather context, time-blocked calendar slots, aur vital notifications.',
       schedule: 'Daily at 08:30 AM',
       status: 'idle',
-      automatedSteps: [
-        'Scan active priorities & deadlines',
-        'Check network status of top web connectors',
-        'Generate structured executive action brief',
-      ],
+      automatedSteps: ['Active priorities check', 'Web connectors scan', 'Action brief ready'],
     },
     {
       id: 'wf-comms',
       title: 'Executive Communication Triaging',
       category: 'career',
-      description: 'Filters incoming messages, generates diplomatic & authoritative reply drafts, and schedules follow-ups.',
+      description: 'Incoming messages filter, Roman Urdu reply drafts, aur follow-up reminders.',
       schedule: 'Hourly sync',
       status: 'idle',
-      automatedSteps: [
-        'Parse high-importance contacts & clients',
-        'Draft context-aware responses with approval guardrails',
-        'Archive routine operational notices',
-      ],
+      automatedSteps: ['Sir Imran & Mama messages check', 'Draft responses with approval guardrails'],
     },
     {
       id: 'wf-finance',
-      title: 'Financial Sentinel & Expense Audit',
+      title: 'Financial Sentinel & Subscription Audit',
       category: 'finance',
-      description: 'Monitors corporate subscriptions, pending payments, invoice reconciliation, and savings targets.',
+      description: 'Recurring cloud spend, pending payments, aur invoice reconciliation.',
       schedule: 'Weekly on Mondays',
       status: 'idle',
-      automatedSteps: [
-        'Track recurring SaaS bills & cloud spend',
-        'Identify cost optimization opportunities',
-        'Log executive financial summary',
-      ],
-    },
-    {
-      id: 'wf-wellness',
-      title: 'High-Performance Wellness & Routine Sentinel',
-      category: 'personal',
-      description: 'Automates ergonomic break prompts, hydration goals, and evening cognitive winding-down protocols.',
-      schedule: 'Intervals (Every 90 mins)',
-      status: 'idle',
-      automatedSteps: [
-        'Monitor continuous screen time',
-        'Trigger posture & deep-focus breaks',
-        'Synchronize sleep & recovery schedule',
-      ],
+      automatedSteps: ['Track recurring cloud spend', 'Log financial summary'],
     },
   ]);
 
-  // 4. Memory Vault State
-  const [memories, setMemories] = useState<MemoryItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('muhib_memories');
-      return saved
-        ? JSON.parse(saved)
-        : [
-            {
-              id: 'm1',
-              category: 'habits',
-              title: 'Language & Executive Preference',
-              detail: 'Prefers world-class executive English and respectful, dignified Roman Urdu.',
-              updatedAt: new Date().toISOString(),
-            },
-            {
-              id: 'm2',
-              category: 'projects',
-              title: 'Tri-Model Research Standard',
-              detail: 'ChatGPT reasoning thesis + Claude critical risk audit + Gemini live web grounding.',
-              updatedAt: new Date().toISOString(),
-            },
-          ];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('muhib_memories', JSON.stringify(memories));
-    } catch {
-      // ignore
-    }
-  }, [memories]);
-
-  // 5. Chat Messages
+  // Messages Stream
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'm-init',
       role: 'assistant',
       content:
-        'Assalam-o-Alaikum Muheb bhai! Main aap ka 24/7 Desktop AI Robot companion hoon. Main bilkul tayyar hoon, aap farmayein main aap ke liye kya kar sakta hoon?',
+        'Assalam-o-Alaikum Muheb bhai! Main aap ka 24/7 Desktop AI Agent companion hoon. Aaj ka schedule aur system guardrails tayyar hain. Aap batayein main aap ki kya madad kar sakta hoon?',
       timestamp: 'Just now',
-      model: 'gemini-3.8-flash',
+      model: 'gemini-2.5-flash',
     },
   ]);
 
-  const handleClearChat = () => {
-    setMessages([
-      {
-        id: 'm-init',
-        role: 'assistant',
-        content:
-          'Assalam-o-Alaikum Muheb bhai! Naya session shuru ho chuka hai. Main aap ki kya khidmat kar sakta hoon?',
-        timestamp: 'Just now',
-        model: 'gemini-3.8-flash',
-      },
-    ]);
-    soundFX.playSuccess();
-  };
+  // Load persistent database on mount
+  useEffect(() => {
+    const fetchDb = async () => {
+      try {
+        const res = await fetch('/api/db/state');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.memories) setMemories(data.memories);
+          if (data.tasks) {
+            setTasks(
+              data.tasks.map((t: any) => ({
+                id: t.id,
+                title: t.title,
+                priority: t.priority || 'medium',
+                category: t.category || 'work',
+                completed: !!t.completed,
+                dueDate: t.time || 'Today',
+                subtasks: t.subtasks || [],
+              }))
+            );
+          }
+          if (data.logs) setLogs(data.logs);
+          if (data.approvals) {
+            setPendingApprovals(data.approvals.filter((a: any) => a.status === 'pending'));
+          }
+          if (data.workspaceFiles) setWorkspaceFiles(data.workspaceFiles);
+        }
+      } catch (err) {
+        console.error('Failed to load initial database:', err);
+      }
+    };
+    fetchDb();
+  }, []);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Text-to-Speech Engine
+  // Text to Speech
   const speakText = async (text: string) => {
     if (voiceAudioMuted) return;
 
@@ -287,18 +190,8 @@ export default function App() {
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.rate = 1.0;
           utterance.pitch = 1.0;
-
-          const voices = window.speechSynthesis.getVoices();
-          const preferred =
-            voices.find((v) => v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('natural')) ||
-            voices.find((v) => v.lang.startsWith('en')) ||
-            voices[0];
-
-          if (preferred) utterance.voice = preferred;
-
           utterance.onend = () => setOrbState('idle');
           utterance.onerror = () => setOrbState('idle');
-
           window.speechSynthesis.speak(utterance);
         } catch {
           setOrbState('idle');
@@ -309,150 +202,9 @@ export default function App() {
     }
   };
 
-  // Web Connector Handlers
-  const handleAddConnector = (newConn: WebConnector) => {
-    setConnectors((prev) => [newConn, ...prev]);
-  };
-
-  const handleBulkAddConnectors = (newConns: WebConnector[]) => {
-    setConnectors((prev) => [...newConns, ...prev]);
-  };
-
-  const handleDeleteConnector = (id: string) => {
-    setConnectors((prev) => prev.filter((c) => c.id !== id));
-    soundFX.playAlert();
-  };
-
-  const handleToggleFavorite = (id: string) => {
-    setConnectors((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isFavorite: !c.isFavorite } : c))
-    );
-    soundFX.playSuccess();
-  };
-
-  // Task Handlers
-  const handleAddTask = (newTask: ExecutiveTask) => {
-    setTasks((prev) => [newTask, ...prev]);
-  };
-
-  const handleToggleTask = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    );
-    soundFX.playSuccess();
-  };
-
-  const handleDeleteTask = (id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
-    soundFX.playAlert();
-  };
-
-  const handleDecomposeTask = (taskId: string) => {
-    soundFX.playSuccess();
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          return {
-            ...t,
-            subtasks: [
-              { id: `st-${Date.now()}-1`, text: 'Phase 1: Research & Context Extraction', done: false },
-              { id: `st-${Date.now()}-2`, text: 'Phase 2: Core Execution & Draft Validation', done: false },
-              { id: `st-${Date.now()}-3`, text: 'Phase 3: Executive Finalization & Delivery', done: false },
-            ],
-          };
-        }
-        return t;
-      })
-    );
-  };
-
-  // Autonomous Workflow Execution Handler
-  const handleRunWorkflow = async (workflow: LifeWorkflow) => {
-    setRunningWorkflowId(workflow.id);
-    soundFX.playWakeChime();
-
-    try {
-      const res = await fetch('/api/workflow/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workflowId: workflow.id,
-          title: workflow.title,
-          category: workflow.category,
-        }),
-      });
-
-      if (res.ok) {
-        soundFX.playSuccess();
-        const confirmationMsg = `Workflow "${workflow.title}" executed autonomously. All operations synchronized.`;
-        if (!voiceAudioMuted) {
-          speakText(confirmationMsg);
-        }
-      }
-    } catch {
-      soundFX.playAlert();
-    } finally {
-      setTimeout(() => {
-        setRunningWorkflowId(null);
-      }, 1200);
-    }
-  };
-
-  // Memory Handlers
-  const handleAddMemory = (
-    category: 'boss' | 'mama' | 'projects' | 'habits',
-    title: string,
-    detail: string
-  ) => {
-    const newItem: MemoryItem = {
-      id: `m-${Date.now()}`,
-      category,
-      title,
-      detail,
-      updatedAt: new Date().toISOString(),
-    };
-    setMemories((prev) => [newItem, ...prev]);
-  };
-
-  const handleDeleteMemory = (id: string) => {
-    setMemories((prev) => prev.filter((m) => m.id !== id));
-  };
-
   // Conversational Chat Handler
   const handleSendMessage = async (userText: string) => {
     if (!userText.trim()) return;
-
-    const lower = userText.toLowerCase();
-
-    // Check if user is asking to add a website or task
-    if (lower.startsWith('add website ') || lower.startsWith('connect ')) {
-      const parts = userText.replace(/^(add website |connect )/i, '').trim();
-      let url = parts;
-      if (!url.startsWith('http')) url = `https://${url}`;
-      handleAddConnector({
-        id: `conn-user-${Date.now()}`,
-        name: parts.replace(/^https?:\/\//, '').split('.')[0],
-        url,
-        category: 'Custom',
-        description: 'Connected via direct executive voice/chat instruction.',
-        tags: ['custom', 'user-command'],
-        isFavorite: false,
-        addedAt: new Date().toISOString().split('T')[0],
-        status: 'active',
-        lastPingMs: 30,
-      });
-    } else if (lower.startsWith('add task ') || lower.startsWith('remind me to ')) {
-      const taskText = userText.replace(/^(add task |remind me to )/i, '').trim();
-      handleAddTask({
-        id: `task-u-${Date.now()}`,
-        title: taskText,
-        priority: 'high',
-        category: 'work',
-        completed: false,
-        dueDate: 'Today',
-        subtasks: [],
-      });
-    }
 
     const newMsg: ChatMessage = {
       id: `u-${Date.now()}`,
@@ -474,22 +226,21 @@ export default function App() {
             role: m.role,
             content: m.content,
           })),
-          model: 'gemini-3.8-flash',
+          model: 'gemini-2.5-flash',
         }),
       });
 
       if (!res.ok) throw new Error('Chat failed');
       const data = await res.json();
       const replyText =
-        data.reply ||
-        'Understood. Your request has been executed and synchronized across your executive workspace.';
+        data.reply || 'Jee Muheb bhai, aap ka kaam process kar liya gaya hai.';
 
       const aiMsg: ChatMessage = {
         id: `a-${Date.now()}`,
         role: 'assistant',
         content: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: data.modelUsed || 'gemini-3.8-flash',
+        model: data.modelUsed || 'gemini-2.5-flash',
       };
 
       setMessages((prev) => [...prev, aiMsg]);
@@ -503,9 +254,9 @@ export default function App() {
         id: `a-${Date.now()}`,
         role: 'assistant',
         content:
-          'Your executive directive has been processed and committed to your operations registry.',
+          'Jee Muheb bhai, main ne aap ka paighaam note kar liya hai aur workspace registry mein synchronize kar diya hai.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: 'enterprise-core',
+        model: 'gemini-2.5-flash',
       };
       setMessages((prev) => [...prev, fallbackMsg]);
       soundFX.playAlert();
@@ -515,126 +266,349 @@ export default function App() {
     }
   };
 
-  return (
-    <div className="h-screen w-screen overflow-hidden refresh-backdrop text-slate-100 flex flex-col font-sans selection:bg-blue-600/30 selection:text-blue-200">
-      {/* Executive Header for Console & Management Views */}
-      {currentTab !== 'chat' && (
-        <ExecutiveHeader
-          currentTab={currentTab}
-          onTabChange={(tab) => setCurrentTab(tab)}
-          onOpenVault={() => setVaultOpen(true)}
-          voiceAudioMuted={voiceAudioMuted}
-          onToggleMute={() => setVoiceAudioMuted((prev) => !prev)}
-          vaultItemCount={memories.length}
-          connectorCount={connectors.length}
-        />
-      )}
+  // Task Handlers (Persisted)
+  const handleToggleTask = async (id: string) => {
+    const target = tasks.find((t) => t.id === id);
+    if (!target) return;
+    const nextCompleted = !target.completed;
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, completed: nextCompleted } : t))
+    );
+    soundFX.playSuccess();
 
-      {/* Main Stage */}
-      <main className="flex-1 h-full overflow-hidden flex flex-col w-full relative">
-        {currentTab === 'chat' && (
-          <DesktopRobotView
+    try {
+      await fetch(`/api/tasks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: nextCompleted }),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleAddTask = async (task: ExecutiveTask) => {
+    setTasks((prev) => [task, ...prev]);
+    soundFX.playSuccess();
+
+    try {
+      await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: task.title,
+          time: task.dueDate,
+          priority: task.priority,
+          category: task.category,
+        }),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleDecomposeTask = (taskId: string) => {
+    soundFX.playSuccess();
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          return {
+            ...t,
+            subtasks: [
+              { id: `st-${Date.now()}-1`, text: 'Pehla qadam: Context & requirements review', done: false },
+              { id: `st-${Date.now()}-2`, text: 'Doosra qadam: Core execution & draft check', done: false },
+              { id: `st-${Date.now()}-3`, text: 'Teesra qadam: Final confirmation & delivery', done: false },
+            ],
+          };
+        }
+        return t;
+      })
+    );
+  };
+
+  // Autonomous Workflow Run
+  const handleRunWorkflow = async (workflow: LifeWorkflow) => {
+    setRunningWorkflowId(workflow.id);
+    soundFX.playWakeChime();
+
+    try {
+      const res = await fetch('/api/workflow/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workflowId: workflow.id,
+          title: workflow.title,
+          category: workflow.category,
+        }),
+      });
+
+      if (res.ok) {
+        soundFX.playSuccess();
+        const msg = `Workflow "${workflow.title}" kamyabi se execute ho gaya.`;
+        if (!voiceAudioMuted) speakText(msg);
+      }
+    } catch {
+      soundFX.playAlert();
+    } finally {
+      setTimeout(() => setRunningWorkflowId(null), 1200);
+    }
+  };
+
+  // Memory Handlers (Persisted)
+  const handleAddMemory = async (
+    category: 'boss' | 'mama' | 'projects' | 'habits',
+    title: string,
+    detail: string
+  ) => {
+    const newItem: MemoryItem = {
+      id: `m-${Date.now()}`,
+      category,
+      title,
+      detail,
+      updatedAt: new Date().toISOString(),
+    };
+    setMemories((prev) => [newItem, ...prev]);
+    soundFX.playSuccess();
+
+    try {
+      await fetch('/api/memories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, title, detail }),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleDeleteMemory = async (id: string) => {
+    setMemories((prev) => prev.filter((m) => m.id !== id));
+    soundFX.playAlert();
+
+    try {
+      await fetch(`/api/memories/${id}`, { method: 'DELETE' });
+    } catch {
+      // ignore
+    }
+  };
+
+  // Workspace File Handlers (Persisted)
+  const handleCreateFile = async (name: string, content: string) => {
+    const newFile: WorkspaceFile = {
+      id: `f-${Date.now()}`,
+      name,
+      size: `${(content.length / 1024).toFixed(1)} KB`,
+      updatedAt: 'Just now',
+      content,
+    };
+    setWorkspaceFiles((prev) => [newFile, ...prev]);
+    soundFX.playSuccess();
+
+    try {
+      await fetch('/api/workspace/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, content }),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  // Approval Gate: BHEJ DO, BADLO, CANCEL
+  const handleApprovalResponse = async (
+    id: string,
+    action: 'approved' | 'modified' | 'denied',
+    feedback?: string,
+    updatedContent?: string
+  ) => {
+    setPendingApprovals((prev) => prev.filter((a) => a.id !== id));
+    soundFX.playSuccess();
+
+    try {
+      const res = await fetch('/api/approvals/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action, feedback, updatedContent }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.logs) setLogs(data.logs);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleOpenApproval = (item: ApprovalItem) => {
+    setActiveApproval(item);
+    setIsApprovalOpen(true);
+  };
+
+  const handleSelectWorkspaceFile = (file: WorkspaceFile) => {
+    setSelectedFile(file);
+    setIsDrawerOpen(true);
+  };
+
+  const handleClearChat = () => {
+    setMessages([
+      {
+        id: 'm-init',
+        role: 'assistant',
+        content:
+          'Assalam-o-Alaikum Muheb bhai! Naya chat session shuru ho chuka hai. Main aap ki kya khidmat kar sakta hoon?',
+        timestamp: 'Just now',
+        model: 'gemini-2.5-flash',
+      },
+    ]);
+    soundFX.playSuccess();
+  };
+
+  return (
+    <div className="h-screen w-screen overflow-hidden bg-[#05080c] text-[#e6edf3] flex font-sans select-none">
+      {/* Blueprint Left Rail Navigation (5 Icons Only) */}
+      <LeftRail
+        currentTab={currentTab}
+        onTabChange={(tab) => setCurrentTab(tab)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        pendingApprovalsCount={pendingApprovals.length}
+      />
+
+      {/* Main Single-Task Stage */}
+      <main className="flex-1 h-full overflow-hidden flex flex-col relative bg-[#05080c]">
+        {/* Tab 1: Aaj (Home) */}
+        {currentTab === 'aaj' && (
+          <AajView
+            tasks={tasks.map((t) => ({
+              id: t.id,
+              title: t.title,
+              time: t.dueDate,
+              completed: t.completed,
+              category: t.category,
+            }))}
+            onToggleTask={handleToggleTask}
+            onAddTask={(title, time) =>
+              handleAddTask({
+                id: `task-${Date.now()}`,
+                title,
+                priority: 'high',
+                category: 'work',
+                completed: false,
+                dueDate: time,
+                subtasks: [],
+              })
+            }
+            pendingApprovals={pendingApprovals}
+            onOpenApproval={handleOpenApproval}
             orbState={orbState}
-            onOrbStateChange={(state) => setOrbState(state)}
+            onNavigate={(tab) => setCurrentTab(tab)}
+            onQuickChat={(prompt) => {
+              setCurrentTab('baat-cheet');
+              handleSendMessage(prompt);
+            }}
+          />
+        )}
+
+        {/* Tab 2: Baat-cheet (Roman Urdu Chat + 3D Robot) */}
+        {(currentTab === 'baat-cheet' || currentTab === 'chat') && (
+          <BaatCheetView
             messages={messages}
             isLoading={isLoading}
             onSendMessage={handleSendMessage}
+            orbState={orbState}
+            onOrbStateChange={(state) => setOrbState(state)}
             onSpeakText={speakText}
             voiceAudioMuted={voiceAudioMuted}
             onToggleMute={() => setVoiceAudioMuted((prev) => !prev)}
-            onNavigate={(tab) => setCurrentTab(tab)}
-            connectors={connectors}
-            tasks={tasks}
             onClearChat={handleClearChat}
           />
         )}
 
-        {currentTab === 'web-hub' && (
-          <div className="flex-1 h-full overflow-y-auto w-full">
-            <UniversalWebConnector
-              connectors={connectors}
-              onAddConnector={handleAddConnector}
-              onBulkAddConnectors={handleBulkAddConnectors}
-              onDeleteConnector={handleDeleteConnector}
-              onToggleFavorite={handleToggleFavorite}
-            />
-          </div>
+        {/* Tab 3: Kaam (Tasks, Plant Vision Skill, Deep Research Skill, Safety Gate) */}
+        {(currentTab === 'kaam' ||
+          currentTab === 'life-ops' ||
+          currentTab === 'agentic-mission' ||
+          currentTab === 'research') && (
+          <KaamView
+            tasks={tasks}
+            onToggleTask={handleToggleTask}
+            onAddTask={handleAddTask}
+            onDecomposeTask={handleDecomposeTask}
+            workflows={workflows}
+            onRunWorkflow={handleRunWorkflow}
+            runningWorkflowId={runningWorkflowId}
+            pendingApprovals={pendingApprovals}
+            onOpenApproval={handleOpenApproval}
+            onSpeakText={speakText}
+            onSaveToMemory={(title, detail) => handleAddMemory('projects', title, detail)}
+            onSendPlantToChat={(analysis, b64) => {
+              setCurrentTab('baat-cheet');
+              handleSendMessage(
+                `Plant analysis: ${analysis.commonName || 'Plant'} health summary: ${analysis.romanUrduSummary}`
+              );
+            }}
+          />
         )}
 
-        {currentTab === 'life-ops' && (
-          <div className="flex-1 h-full overflow-y-auto w-full">
-            <LifeOperationsCenter
-              tasks={tasks}
-              onAddTask={handleAddTask}
-              onToggleTask={handleToggleTask}
-              onDeleteTask={handleDeleteTask}
-              onDecomposeTask={handleDecomposeTask}
-              workflows={workflows}
-              onRunWorkflow={handleRunWorkflow}
-              runningWorkflowId={runningWorkflowId}
-            />
-          </div>
+        {/* Tab 4: Yaadasht (Memory Vault & Workspace Files) */}
+        {currentTab === 'yaadasht' && (
+          <YaadashtView
+            memories={memories}
+            onAddMemory={handleAddMemory}
+            onDeleteMemory={handleDeleteMemory}
+            workspaceFiles={workspaceFiles}
+            onSelectFile={handleSelectWorkspaceFile}
+            onCreateFile={handleCreateFile}
+          />
         )}
 
-        {currentTab === 'agentic-mission' && (
-          <div className="flex-1 h-full overflow-y-auto w-full">
-            <AgenticMissionControl
-              connectors={connectors}
-              tasks={tasks}
-              onNavigateToHub={() => setCurrentTab('web-hub')}
-              onNavigateToOps={() => setCurrentTab('life-ops')}
-              onSpeakText={speakText}
-              onAutoAddDecomposedTask={(title) => {
-                handleAddTask({
-                  id: `task-decomp-${Date.now()}`,
-                  title,
-                  priority: 'high',
-                  category: 'work',
-                  completed: false,
-                  dueDate: 'Today',
-                  subtasks: [
-                    { id: `st-${Date.now()}-1`, text: 'Phase 1: Background Context Audit', done: false },
-                    { id: `st-${Date.now()}-2`, text: 'Phase 2: Execution & Output Verification', done: false },
-                  ],
-                });
-              }}
-            />
-          </div>
-        )}
-
-        {currentTab === 'research' && (
-          <div className="flex-1 h-full overflow-y-auto w-full">
-            <DeepResearchView
-              onSpeakText={speakText}
-              onSaveToMemory={(title, detail) => handleAddMemory('projects', title, detail)}
-            />
-          </div>
-        )}
-
-        {currentTab === 'dashboard' && (
-          <div className="flex-1 h-full overflow-y-auto w-full">
-            <ExecutiveDashboard
-              onNavigate={(tab) => setCurrentTab(tab)}
-              connectors={connectors}
-              tasks={tasks}
-              workflows={workflows}
-              onRunWorkflow={handleRunWorkflow}
-              runningWorkflowId={runningWorkflowId}
-              onAddTask={handleAddTask}
-              onToggleTask={handleToggleTask}
-              onDecomposeTask={handleDecomposeTask}
-            />
-          </div>
+        {/* Tab 5: Settings (Safety, Voice, Logs, Connectors) */}
+        {(currentTab === 'settings' || currentTab === 'web-hub' || currentTab === 'dashboard') && (
+          <SettingsView
+            logs={logs}
+            connectors={connectors}
+            voiceAudioMuted={voiceAudioMuted}
+            onToggleMute={() => setVoiceAudioMuted((prev) => !prev)}
+            onClearLogs={() => setLogs([])}
+          />
         )}
       </main>
 
-      {/* Slide-over Memory Vault */}
-      <MemoryVaultDrawer
-        isOpen={vaultOpen}
-        onClose={() => setVaultOpen(false)}
-        memories={memories}
-        onAddMemory={handleAddMemory}
-        onDeleteMemory={handleDeleteMemory}
+      {/* Overlay 1: Approval Sheet (Slides up from bottom for Laal darja actions: BHEJ DO, BADLO, CANCEL) */}
+      <ApprovalSheet
+        item={activeApproval}
+        isOpen={isApprovalOpen}
+        onClose={() => setIsApprovalOpen(false)}
+        onRespond={handleApprovalResponse}
+      />
+
+      {/* Overlay 2: Detail Drawer (Slides from right to inspect workspace files without popup nesting) */}
+      <DetailDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        title={selectedFile?.name || 'File Detail'}
+        subtitle={`Size: ${selectedFile?.size} • ${selectedFile?.updatedAt}`}
+      >
+        <div className="bg-[#111a24] border border-[#1c2a38] rounded-lg p-4 font-mono text-xs text-[#e6edf3] whitespace-pre-wrap leading-relaxed select-text">
+          {selectedFile?.content}
+        </div>
+      </DetailDrawer>
+
+      {/* Fast Command Launcher: Ctrl + K */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={(tab) => setCurrentTab(tab)}
+        onQuickAction={(action) => {
+          if (action === 'open-palette') setIsCommandPaletteOpen(true);
+          if (action === 'new-task') {
+            setCurrentTab('aaj');
+          }
+          if (action === 'stop-agent') {
+            setOrbState('idle');
+            soundFX.playAlert();
+          }
+        }}
       />
     </div>
   );
