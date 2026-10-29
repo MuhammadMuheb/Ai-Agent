@@ -1,0 +1,8 @@
+{
+  "name": "Muhib AI - Personal AI Agent & Plant Vision",
+  "description": "Dark sci-fi 3-column personal AI assistant with voice, image analysis, plant care identification, memory, and message approval workflows.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
